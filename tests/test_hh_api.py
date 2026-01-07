@@ -1,30 +1,13 @@
-from unittest.mock import patch
-from src.api.hh_api import get_employer_vacancies
+import pytest
+from unittest.mock import patch, MagicMock
+from src.hh_api.hh_api import HHAPI
 
-def mock_hh_response(*args, **kwargs):
-    return {
-        "items": [
-            {
-                "id": "123",
-                "name": "Python Developer",
-                "salary": {"from": 100000, "to": 150000, "currency": "RUR"},
-                "alternate_url": "http://hh.ru/vacancy/123",
-                "employer": {"id": 1}
-            }
-        ]
-    }
+def test_get_employer_vacancies():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"items": [{"id": "1", "name": "Python Developer"}]}
+    mock_response.raise_for_status.return_value = None
 
-@patch("requests.get")
-def test_get_employer_vacancies(mock_get):
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json = mock_hh_response
-
-    vacancies = get_employer_vacancies(1, pages=1)
-    assert isinstance(vacancies, list)
-    assert vacancies[0]["vacancy_id"] == 123
-    assert vacancies[0]["vacancy_name"] == "Python Developer"
-    assert vacancies[0]["salary_from"] == 100000
-    assert vacancies[0]["salary_to"] == 150000
-    assert vacancies[0]["currency"] == "RUR"
-    assert vacancies[0]["vacancy_url"] == "http://hh.ru/vacancy/123"
-    assert vacancies[0]["company_id"] == 1
+    with patch("requests.get", return_value=mock_response):
+        vacancies = HHAPI.get_employer_vacancies(employer_id=123)
+        assert len(vacancies) == 1
+        assert vacancies[0]["name"] == "Python Developer"
